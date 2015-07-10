@@ -1,0 +1,105 @@
+#!/bin/bash
+WORKSPACE=$(cd $(dirname $0)/; pwd)
+cd $WORKSPACE
+
+
+module=thrift
+app=godemos-$module
+conf=cfg.json
+pidfile=var/app.pid
+logfile=var/app.log
+
+mkdir -p var
+
+function check_pid() {
+    if [ -f $pidfile ];then
+        pid=`cat $pidfile`
+        if [ -n $pid ]; then
+            running=`ps -p $pid|grep -v "PID TTY" |wc -l`
+            return $running
+        fi
+    fi
+    return 0
+}
+
+function start() {
+    check_pid
+    running=$?
+    if [ $running -gt 0 ];then
+        echo -n "$app now is running already, pid="
+        cat $pidfile
+        return 1
+    fi
+
+    nohup ./$app -server true -c $conf &> $logfile &
+    echo $! > $pidfile
+    echo "$app started..., pid=$!"
+}
+
+function stop() {
+    pid=`cat $pidfile`
+    kill -9 $pid
+    echo "$app stoped..."
+}
+
+function restart() {
+    stop
+    sleep 1
+    start
+}
+
+function status() {
+    check_pid
+    running=$?
+    if [ $running -gt 0 ];then
+        echo -n "$app now is running, pid="
+        cat $pidfile
+    else
+        echo "$app is stoped"
+    fi
+}
+
+function tailf() {
+    tail -f $logfile
+}
+
+# build
+function thrift_gen(){
+    # thrift
+    thrift -I ./proto/ -out ./ -r --gen go:thrift_import=github.com/niean/thrift/lib/go/thrift ./proto/tutorial.thrift
+    ecode=$?
+    if [ $ecode != 0 ];then
+        echo -e "thrift: gen code error"
+        exit $ecode
+    fi
+}
+
+function build() {
+    go build -o $app main.go
+}
+
+function usage() {
+    echo "$0 build|pack|packbin|start|stop|restart|status|tail"
+}
+
+action=$1
+case $action in
+    "thrift")
+        thrift_gen
+        ;;
+    "build")
+        build
+        ;;
+    "start")
+        start 
+        ;;
+    "stop")
+        stop
+        ;;
+    "status")
+        status
+        ;;
+    * )
+        usage
+        ;;
+esac

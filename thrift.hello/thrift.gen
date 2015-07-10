@@ -1,0 +1,1 @@
+thrift -I ./proto/ -out ./ -r --gen go:thrift_import=github.com/niean/thrift/lib/go/thrift ./proto/tutorial.thrift

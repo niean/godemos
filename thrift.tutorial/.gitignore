@@ -23,5 +23,8 @@ _testmain.go
 *.test
 *.prof
 
+# myapp
 godemos*
 var
+shared
+tutorial
