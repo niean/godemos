@@ -1,0 +1,16 @@
+{
+    "debug": true,
+    "http": {
+        "enable": true,
+        "listen": "0.0.0.0:6060"
+    },
+    "rrd": {
+        "enable": true,
+        "callTimeout": 5000,
+        "protocol": "binary",
+        "framed": false,
+        "buffered": false,
+        "secured": false,
+        "listen": "0.0.0.0:9090"
+    }
+}
