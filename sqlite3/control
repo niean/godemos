@@ -1,0 +1,160 @@
+#!/bin/bash
+workspace=$(cd $(dirname $0) && pwd)
+cd $workspace
+
+module=sqlite3
+app=tycs-$module
+conf=cfg.json
+pidfile=var/app.pid
+logfile=var/app.log
+
+mkdir -p var &>/dev/null
+
+
+## build & pack
+function build() {
+    go build -o $app main.go
+    sc=$?
+    if [ $sc -ne 0 ];then
+        echo "build error"
+        exit $sc
+    else
+        echo -e "build ok" 
+    fi
+}
+
+## opt
+function start() {
+    check_pid
+    running=$?
+    if [ $running -gt 0 ];then
+        echo -n "started, pid="
+        cat $pidfile
+        return 1
+    fi
+
+    nohup ./$app -c $conf >>$logfile 2>&1 &
+    echo $! > $pidfile
+    echo "start ok, pid=$!"
+}
+
+function stop() {
+    pid=`cat $pidfile`
+    kill $pid
+    echo "stoped"
+}
+
+function kill9() {
+    pid=`cat $pidfile`
+    kill -9 $pid
+    echo "killed"
+}
+
+function restart() {
+    stop
+    sleep 1
+    start
+}
+
+## other
+function status() {
+    check_pid
+    running=$?
+    if [ $running -gt 0 ];then
+        echo -n "running, pid="
+        cat $pidfile
+    else
+        echo "stoped"
+    fi
+}
+
+function tailf() {
+    tail -f $logfile
+}
+
+## internal
+function check_pid() {
+    if [ -f $pidfile ];then
+        pid=`cat $pidfile`
+        if [ -n $pid ]; then
+            running=`ps -p $pid|grep -v "PID TTY" |wc -l`
+            return $running
+        fi
+    fi
+    return 0
+}
+
+## dependencies
+function save_dependencies(){
+    godep save
+}
+
+function restore_dependencies(){
+    godep restore
+}
+
+function show_dependencies(){
+    dependencies_file="./Godeps/Godeps.json"
+    if [ ! -f $dependencies_file ]; then
+        echo -e "godeps: dependencies'file not found"
+        exit 1
+    fi
+
+    cat $dependencies_file
+}
+
+## usage
+function usage() {
+    echo "$0 build|pack|packbin|start|stop|restart|status|tail|version|save|restore|show"
+}
+
+## main
+action=$1
+case $action in
+    ## build
+    "build" )
+        build
+        ;;
+    "pack" )
+        pack
+        ;;
+    "packbin" )
+        packbin
+        ;;
+    ## opt
+    "start" )
+        start
+        ;;
+    "stop" )
+        stop
+        ;;
+    "kill" )
+        kill9
+        ;;
+    "restart" )
+        restart
+        ;;
+    ## other
+    "status" )
+        status
+        ;;
+    "version" )
+        version
+        ;;
+    "tail" )
+        tailf
+        ;;
+    ## dependencies
+    "save" )
+        save_dependencies
+        ;;
+    "restore" )
+        restore_dependencies
+        ;;
+    "show" )
+        show_dependencies
+        ;;
+    * )
+        usage
+        ;;
+esac
